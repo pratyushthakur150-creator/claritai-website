@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Smile, Send, ThumbsUp, ThumbsDown, X, RotateCcw, Sparkles, ArrowDown } from 'lucide-react';
+import { Plus, Smile, ThumbsUp, ThumbsDown, X, RotateCcw, Sparkles, ArrowDown } from 'lucide-react';
 import { API_BASE_URL } from '../services/api';
 import {
   ConfettiBurst, TypewriterText, Particles, TypingIndicator,
@@ -426,12 +426,83 @@ export default function ChatBot() {
                           transition={{ duration: 1.5, repeat: Infinity }}
                         />
                       )}
+                      {/* Custom animated arrow */}
                       <motion.div
-                        animate={sendPulse ? { scale: [1, 1.5, 1], rotate: [0, 20, 0] } : {}}
-                        transition={{ duration: 0.4 }}
-                        className="relative z-10"
+                        className="relative z-10 flex items-center justify-center"
+                        animate={sendPulse
+                          ? { x: [0, 14, -14, 0], opacity: [1, 0, 0, 1] }
+                          : input.trim()
+                          ? {}
+                          : {}}
+                        transition={{ duration: 0.45, ease: 'easeInOut' }}
                       >
-                        <Send className={`w-4 h-4 ${input.trim() ? 'text-white' : 'text-gray-400'}`} />
+                        {/* Trail dots — visible when active */}
+                        {input.trim() && (
+                          <>
+                            <motion.span
+                              className="absolute rounded-full bg-white/60"
+                              animate={sendPulse ? { x: [-6, -14], opacity: [0.6, 0], scale: [1, 0.4] } : { opacity: [0, 0.5, 0], x: [0, -4] }}
+                              transition={sendPulse ? { duration: 0.35 } : { duration: 1.2, repeat: Infinity, delay: 0 }}
+                              style={{ width: 4, height: 4, left: -8, top: '50%', marginTop: -2 }}
+                            />
+                            <motion.span
+                              className="absolute rounded-full bg-white/40"
+                              animate={sendPulse ? { x: [-10, -20], opacity: [0.4, 0], scale: [1, 0.3] } : { opacity: [0, 0.35, 0], x: [0, -6] }}
+                              transition={sendPulse ? { duration: 0.4, delay: 0.04 } : { duration: 1.2, repeat: Infinity, delay: 0.15 }}
+                              style={{ width: 3, height: 3, left: -14, top: '50%', marginTop: -1.5 }}
+                            />
+                          </>
+                        )}
+                        {/* Arrow SVG */}
+                        <motion.svg
+                          width="18" height="18" viewBox="0 0 18 18" fill="none"
+                          animate={sendPulse
+                            ? { x: [0, 10], rotate: [0, 15], opacity: [1, 0] }
+                            : input.trim()
+                            ? { x: [0, 1.5, 0] }
+                            : {}}
+                          whileHover={input.trim() ? { x: 2 } : {}}
+                          transition={sendPulse
+                            ? { duration: 0.3 }
+                            : input.trim()
+                            ? { duration: 1.6, repeat: Infinity, ease: 'easeInOut' }
+                            : {}}
+                        >
+                          {/* Main arrow shaft */}
+                          <motion.line
+                            x1="3" y1="9" x2="13" y2="9"
+                            stroke={input.trim() ? 'white' : '#9ca3af'}
+                            strokeWidth="1.8"
+                            strokeLinecap="round"
+                            animate={sendPulse ? { x2: 16, opacity: 0 } : {}}
+                            transition={{ duration: 0.3 }}
+                          />
+                          {/* Arrowhead top */}
+                          <motion.line
+                            x1="9" y1="4.5" x2="14" y2="9"
+                            stroke={input.trim() ? 'white' : '#9ca3af'}
+                            strokeWidth="1.8"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                          {/* Arrowhead bottom */}
+                          <motion.line
+                            x1="9" y1="13.5" x2="14" y2="9"
+                            stroke={input.trim() ? 'white' : '#9ca3af'}
+                            strokeWidth="1.8"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                          {/* Sparkle dot at tip — only when active */}
+                          {input.trim() && (
+                            <motion.circle
+                              cx="14.5" cy="9" r="1.2"
+                              fill="white"
+                              animate={{ scale: [1, 1.6, 1], opacity: [0.8, 1, 0.8] }}
+                              transition={{ duration: 0.9, repeat: Infinity }}
+                            />
+                          )}
+                        </motion.svg>
                       </motion.div>
                     </motion.button>
                   </div>
