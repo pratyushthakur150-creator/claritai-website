@@ -287,7 +287,7 @@ export default function ChatBot() {
                         </span>
                       </div>
                       <div>
-                        <h3 className="text-gray-900 font-bold text-sm tracking-tight">{BOT_NAME} by ClaritAI</h3>
+                        <h3 className="text-gray-900 font-bold text-sm tracking-tight">{BOT_NAME}</h3>
                         <div className="flex items-center gap-1.5">
                           <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
                           <span className="text-[11px] text-gray-400 font-medium">Online • Sales Assistant</span>
