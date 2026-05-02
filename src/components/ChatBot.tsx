@@ -137,7 +137,8 @@ export default function ChatBot() {
             exit={{ scale: 0, rotate: 180, opacity: 0 }}
             transition={{ type: 'spring', stiffness: 260, damping: 20 }}
             onClick={() => setIsOpen(true)}
-            className="fixed bottom-8 right-8 cursor-pointer group z-50"
+            data-cursor="chatbot"
+            className="fixed bottom-8 right-8 cursor-none group z-50"
           >
             {/* Orbital rings */}
             <motion.div className="absolute inset-[-8px] rounded-full border-2 border-blue-400/20"
@@ -178,7 +179,8 @@ export default function ChatBot() {
             animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
             exit={{ opacity: 0, y: 60, scale: 0.85, filter: 'blur(10px)' }}
             transition={{ type: 'spring', stiffness: 280, damping: 24 }}
-            className="fixed bottom-6 right-6 w-[400px] max-w-[calc(100vw-2rem)] h-[640px] max-h-[calc(100vh-3rem)] rounded-[28px] flex flex-col overflow-hidden z-50"
+            data-cursor="chatbot"
+            className="fixed bottom-6 right-6 w-[400px] max-w-[calc(100vw-2rem)] h-[640px] max-h-[calc(100vh-3rem)] rounded-[28px] flex flex-col overflow-hidden z-50 cursor-none"
           >
             {/* Rainbow animated border */}
             <div className="absolute -inset-[1.5px] rounded-[28px] z-0 overflow-hidden">
