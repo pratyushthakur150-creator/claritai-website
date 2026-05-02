@@ -342,52 +342,111 @@ export default function ChatBot() {
               </AnimatePresence>
 
               {/* ── Input Bar ── */}
-              <div className="px-4 py-3 bg-white relative z-10">
-                <div className={`flex items-center gap-2 bg-gray-50/80 rounded-2xl px-3 py-2.5 border transition-all relative overflow-hidden ${
-                  input.trim() ? 'border-blue-300/60' : 'border-gray-200/60'
-                }`}
-                  style={input.trim() ? { boxShadow: '0 0 0 3px rgba(74,124,255,0.08)' } : {}}>
-
-                  {/* Plus button */}
-                  <motion.button whileHover={{ scale: 1.15, rotate: 90 }} whileTap={{ scale: 0.9 }}
-                    className="p-1.5 rounded-xl hover:bg-gray-200/60 transition-colors cursor-pointer flex-shrink-0 relative z-10">
-                    <Plus className="w-4 h-4 text-gray-400" />
-                  </motion.button>
-
-                  <input ref={inputRef} type="text" value={input} onChange={e => setInput(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && sendMessage()}
-                    placeholder="Ask about chatbot, CRM, or voice agent..."
-                    className="flex-1 bg-transparent text-sm text-gray-800 placeholder-gray-400 outline-none min-w-0 relative z-10" />
-
-                  {/* Smile button */}
-                  <motion.button whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.9 }}
-                    className="p-1.5 rounded-xl hover:bg-gray-200/60 transition-colors cursor-pointer flex-shrink-0 relative z-10">
-                    <Smile className="w-4 h-4 text-gray-400" />
-                  </motion.button>
-
-                  {/* Send button with ripple */}
-                  <RippleButton onClick={() => sendMessage()} disabled={!input.trim()}
-                    className="p-2.5 rounded-xl transition-all cursor-pointer flex-shrink-0 relative z-10 disabled:opacity-30 disabled:cursor-not-allowed"
+              <div className="px-3 pb-3 pt-2 relative z-10">
+                {/* Animated gradient border wrapper */}
+                <div className="relative rounded-2xl p-[1.5px] overflow-hidden">
+                  {/* Animated border gradient */}
+                  <motion.div
+                    className="absolute inset-0 rounded-2xl"
+                    animate={input.trim()
+                      ? { opacity: 1, backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }
+                      : { opacity: 0.4, backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }
+                    }
+                    transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
                     style={{
-                      background: input.trim() ? 'linear-gradient(135deg, #4A7CFF, #8B5CF6, #FF6B4A)' : '#e5e7eb',
-                      boxShadow: input.trim() ? '0 4px 15px rgba(74,124,255,0.3)' : 'none',
-                    }}>
-                    <motion.div animate={sendPulse ? { scale: [1, 1.4, 1] } : {}} transition={{ duration: 0.3 }}>
-                      <Send className="w-4 h-4 text-white" />
-                    </motion.div>
-                  </RippleButton>
+                      background: 'linear-gradient(90deg, #4A7CFF, #8B5CF6, #FF6B4A, #EC4899, #06B6D4, #4A7CFF)',
+                      backgroundSize: '300% 100%',
+                    }}
+                  />
+                  {/* Inner container */}
+                  <div className={`relative flex items-center gap-2 rounded-[14px] px-3 py-2.5 transition-all duration-300 ${
+                    input.trim() ? 'bg-white' : 'bg-gray-50'
+                  }`}
+                    style={input.trim() ? { boxShadow: '0 4px 20px rgba(74,124,255,0.12)' } : {}}>
+
+                    {/* Plus button — gradient on hover */}
+                    <motion.button
+                      whileHover={{ scale: 1.2, rotate: 90 }} whileTap={{ scale: 0.85 }}
+                      className="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center transition-all cursor-pointer"
+                      style={{ background: 'transparent' }}
+                      onHoverStart={e => (e.target as HTMLElement).style.background = 'linear-gradient(135deg,rgba(74,124,255,0.12),rgba(139,92,246,0.12))'}
+                      onHoverEnd={e => (e.target as HTMLElement).style.background = 'transparent'}
+                    >
+                      <Plus className="w-4 h-4 text-gray-400" />
+                    </motion.button>
+
+                    {/* Input field */}
+                    <input
+                      ref={inputRef} type="text" value={input}
+                      onChange={e => setInput(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && sendMessage()}
+                      placeholder="Message Sia..."
+                      className="flex-1 bg-transparent text-sm text-gray-800 placeholder-gray-400 outline-none min-w-0 font-medium"
+                    />
+
+                    {/* Smile button */}
+                    <motion.button
+                      whileHover={{ scale: 1.2, rotate: -15 }} whileTap={{ scale: 0.85 }}
+                      className="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center cursor-pointer"
+                    >
+                      <Smile className="w-4 h-4 text-gray-400 hover:text-yellow-400 transition-colors" />
+                    </motion.button>
+
+                    {/* ── Send Button — the star of the show ── */}
+                    <motion.button
+                      onClick={() => sendMessage()} disabled={!input.trim()}
+                      whileHover={input.trim() ? { scale: 1.08 } : {}}
+                      whileTap={input.trim() ? { scale: 0.9 } : {}}
+                      animate={input.trim() ? { scale: [1, 1.03, 1] } : { scale: 1 }}
+                      transition={input.trim() ? { duration: 2, repeat: Infinity, ease: 'easeInOut' } : {}}
+                      className="flex-shrink-0 relative w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer disabled:cursor-not-allowed overflow-hidden"
+                      style={{
+                        background: input.trim()
+                          ? 'linear-gradient(135deg, #4A7CFF 0%, #8B5CF6 50%, #FF6B4A 100%)'
+                          : '#e5e7eb',
+                        boxShadow: input.trim()
+                          ? '0 0 0 0 rgba(74,124,255,0.4), 0 4px 15px rgba(74,124,255,0.35)'
+                          : 'none',
+                      }}
+                    >
+                      {/* Shimmer sweep */}
+                      {input.trim() && (
+                        <motion.div
+                          className="absolute inset-0 rounded-xl"
+                          style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent)' }}
+                          animate={{ x: ['-100%', '200%'] }}
+                          transition={{ duration: 1.8, repeat: Infinity, ease: 'linear', repeatDelay: 0.5 }}
+                        />
+                      )}
+                      {/* Pulse ring when active */}
+                      {input.trim() && (
+                        <motion.div
+                          className="absolute inset-0 rounded-xl"
+                          animate={{ boxShadow: ['0 0 0 0px rgba(74,124,255,0.5)', '0 0 0 6px rgba(74,124,255,0)'] }}
+                          transition={{ duration: 1.5, repeat: Infinity }}
+                        />
+                      )}
+                      <motion.div
+                        animate={sendPulse ? { scale: [1, 1.5, 1], rotate: [0, 20, 0] } : {}}
+                        transition={{ duration: 0.4 }}
+                        className="relative z-10"
+                      >
+                        <Send className={`w-4 h-4 ${input.trim() ? 'text-white' : 'text-gray-400'}`} />
+                      </motion.div>
+                    </motion.button>
+                  </div>
                 </div>
 
-                {/* Powered by */}
-                <div className="flex items-center justify-center mt-2.5 gap-1.5">
-                  <motion.div animate={{ opacity: [0.3, 0.6, 0.3] }} transition={{ duration: 3, repeat: Infinity }}
-                    className="w-1 h-1 rounded-full bg-blue-300" />
-                  <span className="text-[10px] text-gray-300 font-medium tracking-wider">
-                    Powered by Clarit<span className="text-transparent bg-clip-text"
-                      style={{ backgroundImage: 'linear-gradient(135deg, #4A7CFF, #FF6B4A)' }}>AI</span>
+                {/* Powered by — enhanced */}
+                <div className="flex items-center justify-center mt-2 gap-1.5">
+                  <motion.div animate={{ scale: [1, 1.4, 1], opacity: [0.4, 0.8, 0.4] }}
+                    transition={{ duration: 2.5, repeat: Infinity }} className="w-1 h-1 rounded-full bg-blue-400" />
+                  <span className="text-[10px] font-semibold tracking-wider" style={{ color: '#c0c0c8' }}>
+                    Powered by <span className="text-transparent bg-clip-text font-bold"
+                      style={{ backgroundImage: 'linear-gradient(135deg, #4A7CFF, #8B5CF6, #FF6B4A)' }}>ClaritAI</span>
                   </span>
-                  <motion.div animate={{ opacity: [0.3, 0.6, 0.3] }} transition={{ duration: 3, repeat: Infinity, delay: 0.5 }}
-                    className="w-1 h-1 rounded-full bg-orange-300" />
+                  <motion.div animate={{ scale: [1, 1.4, 1], opacity: [0.4, 0.8, 0.4] }}
+                    transition={{ duration: 2.5, repeat: Infinity, delay: 1.25 }} className="w-1 h-1 rounded-full bg-orange-400" />
                 </div>
               </div>
 
