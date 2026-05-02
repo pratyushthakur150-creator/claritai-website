@@ -14,7 +14,7 @@ import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import ScrollProgress from './components/ScrollProgress';
 import InteractiveCursor from './components/InteractiveCursor';
-import WhatsAppButton from './components/WhatsAppButton';
+import ChatBot from './components/ChatBot';
 
 function App() {
   return (
@@ -36,7 +36,7 @@ function App() {
             <Route path="/register" element={<Register />} />
           </Routes>
           <Footer />
-          <WhatsAppButton />
+          <ChatBot />
           <Toaster
             position="top-right"
             toastOptions={{

@@ -10,6 +10,7 @@ import { authRouter } from './routes/auth';
 import { newsletterRouter } from './routes/newsletter';
 import { demoRouter } from './routes/demo';
 import { adminRouter } from './routes/admin';
+import chatRouter from './routes/chat';
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -45,6 +46,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/newsletter', newsletterRouter);
 app.use('/api/demo', demoRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/chat', chatRouter);
 
 // 404 handler
 app.use((_req, res) => {
