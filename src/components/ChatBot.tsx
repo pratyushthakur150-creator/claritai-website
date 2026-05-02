@@ -1,334 +1,370 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageSquare, X, Send, Bot, User, Sparkles, ArrowRight } from 'lucide-react';
+import { Plus, Smile, Send, ThumbsUp, ThumbsDown, X, RotateCcw, Sparkles, ArrowDown, MessageCircle } from 'lucide-react';
 import { API_BASE_URL } from '../services/api';
+import { ConfettiBurst, TypewriterText, Particles, TypingIndicator, RippleButton, MessageBubble, BOT_AVATAR } from './chat/ChatHelpers';
 
 interface Message {
-  id: string;
-  role: 'user' | 'bot';
+  id: number;
+  sender: 'bot' | 'user';
   text: string;
-  chips?: string[];
-  timestamp: number;
+  timestamp: string;
+  rating?: 'up' | 'down' | null;
+  status?: 'sent' | 'delivered' | 'read';
 }
 
-interface LeadState {
-  name: string | null;
-  email: string | null;
-  phone: string | null;
-  institute: string | null;
-  interest: string | null;
-  captured: boolean;
-}
+const BOT_NAME = 'Sia';
+const BOT_AVATAR_LG = '/sia-avatar.png';
+const STORAGE_KEY = 'claritai_chat_v2';
+const WELCOME_REPLIES = ['AI Chatbot', 'CRM Platform', 'Voice Agent', 'Book a Demo'];
 
-const STORAGE_KEY = 'claritai_chat';
-const WELCOME_MSG = `👋 Hi! I'm the ClaritAI Assistant — an AI-powered chatbot just like the ones we build for coaching institutes.\n\nI can help you with:\n• **Product info** — Sia Chatbot, Voice AI, CRM Suite\n• **Pricing** — plans starting at ₹4,999/mo\n• **Book a demo** — see ClaritAI in action\n• **Any questions** about lead conversion for coaching institutes\n\nWhat would you like to know?`;
-
-const WELCOME_CHIPS = ['🤖 How Sia Works', '💰 Pricing Plans', '📅 Book a Demo', '📞 Talk to Team'];
+const BOT_RESPONSES: { text: string; replies: string[] }[] = [
+  { text: "Our AI Chatbot lives on your website and works 24/7 — capturing leads, answering visitor questions, and booking meetings while you sleep. It's trained on YOUR business data so every reply is accurate and on-brand!", replies: ['Show me a demo', 'Chatbot pricing', 'How is it different?'] },
+  { text: "Our CRM brings order to your sales pipeline. Track every lead from first touch to close, automate follow-ups, assign team members, and see real-time analytics — all in one dashboard.", replies: ['CRM features', 'CRM pricing', 'Book a demo'] },
+  { text: "The Voice Agent handles your phone calls with natural-sounding AI. It qualifies inbound leads, makes outbound follow-up calls, books appointments, answers FAQs, and transfers to a human rep when needed!", replies: ['Voice demo', 'Voice pricing', 'Get a quote'] },
+  { text: "Great news — you can bundle all three! Sia Chatbot starts at ₹4,999/mo, CRM at ₹9,999/mo, and Voice Agent at ₹7,999/mo. Best value is our Complete Bundle at ₹14,999/mo. Want a custom quote?", replies: ['Bundle & save', 'Custom quote', 'Start free trial'] },
+];
 
 export default function ChatBot() {
-  const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const [showWelcome, setShowWelcome] = useState(true);
-  const [leadState, setLeadState] = useState<LeadState>({ name: null, email: null, phone: null, institute: null, interest: null, captured: false });
-  const [hasNewMessage, setHasNewMessage] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const [ratingMessageId, setRatingMessageId] = useState<number | null>(null);
+  const [ratings, setRatings] = useState<Record<number, 'up' | 'down'>>({});
+  const [sendPulse, setSendPulse] = useState(false);
+  const [quickReplies, setQuickReplies] = useState<string[]>([]);
+  const [typingDone, setTypingDone] = useState(true);
+  const [confetti, setConfetti] = useState<{ x: number; y: number } | null>(null);
+  const [showScrollBtn, setShowScrollBtn] = useState(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const firstOpen = useRef(true);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+  let msgIdCounter = useRef(Date.now());
 
-  // Load persisted state
+  // Load persisted messages
   useEffect(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
         if (parsed.messages?.length) setMessages(parsed.messages);
-        if (parsed.leadState) setLeadState(prev => ({ ...prev, ...parsed.leadState }));
+        if (parsed.ratings) setRatings(parsed.ratings);
       }
     } catch {}
   }, []);
 
-  // Persist state
+  // Persist
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ messages: messages.slice(-40), leadState }));
-    } catch {}
-  }, [messages, leadState]);
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ messages: messages.slice(-40), ratings })); } catch {}
+  }, [messages, ratings]);
 
-  // Scroll to bottom
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isTyping]);
+  useEffect(() => { if (typingDone) chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, isTyping, typingDone]);
+  useEffect(() => { if (isOpen) setTimeout(() => inputRef.current?.focus(), 400); }, [isOpen]);
 
-  // Focus input on open
-  useEffect(() => {
-    if (isOpen) setTimeout(() => inputRef.current?.focus(), 400);
-  }, [isOpen]);
-
-  const genId = () => Math.random().toString(36).slice(2, 10);
-
-  const addMessage = useCallback((role: 'user' | 'bot', text: string, chips?: string[]) => {
-    setMessages(prev => [...prev, { id: genId(), role, text, chips, timestamp: Date.now() }]);
+  const handleChatScroll = useCallback(() => {
+    if (!chatContainerRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = chatContainerRef.current;
+    setShowScrollBtn(scrollHeight - scrollTop - clientHeight > 80);
   }, []);
 
-  const extractLead = (text: string) => {
-    const phoneMatch = text.match(/(?:\+?91[\s-]?)?([6-9]\d{9})/);
-    const emailMatch = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
-    const nameMatch = text.match(/(?:my name is|i'm|i am|this is|call me)\s+([A-Za-z][a-zA-Z]*(?:\s+[A-Za-z][a-zA-Z]*){0,2})/i);
+  const scrollToBottom = () => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
 
-    setLeadState(prev => ({
-      ...prev,
-      ...(phoneMatch && !prev.phone ? { phone: phoneMatch[1] } : {}),
-      ...(emailMatch && !prev.email ? { email: emailMatch[0].toLowerCase() } : {}),
-      ...(nameMatch && !prev.name ? { name: nameMatch[1].trim() } : {}),
-    }));
-  };
+  const sendMessage = async (textOverride?: string) => {
+    const text = textOverride || input.trim();
+    if (!text) return;
+    setInput(''); setQuickReplies([]);
+    setSendPulse(true);
+    setTimeout(() => setSendPulse(false), 500);
 
-  const handleOpen = () => {
-    setIsOpen(true);
-    setHasNewMessage(false);
-    if (firstOpen.current && messages.length === 0) {
-      firstOpen.current = false;
-      setTimeout(() => {
-        setShowWelcome(false);
-        addMessage('bot', WELCOME_MSG, WELCOME_CHIPS);
-      }, 1800);
-    } else {
-      setShowWelcome(false);
-    }
-  };
+    const userMsg: Message = { id: ++msgIdCounter.current, sender: 'user', text, timestamp: new Date().toISOString(), status: 'sent' };
+    setMessages(prev => [...prev, userMsg]);
 
-  const handleSend = async (overrideText?: string) => {
-    const text = (overrideText || input).trim();
-    if (!text || isTyping) return;
-    setInput('');
-    addMessage('user', text);
-    extractLead(text);
-    setIsTyping(true);
+    // Update status to read
+    setTimeout(() => setMessages(prev => prev.map(m => m.id === userMsg.id ? { ...m, status: 'read' } : m)), 800);
+
+    setIsTyping(true); setTypingDone(false);
+    const delay = 1200 + Math.random() * 1200;
 
     try {
       const res = await fetch(`${API_BASE_URL}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, history: messages.slice(-10).map(m => ({ role: m.role === 'bot' ? 'assistant' : 'user', content: m.text })) }),
+        body: JSON.stringify({ message: text, history: messages.slice(-10).map(m => ({ role: m.sender === 'bot' ? 'assistant' : 'user', content: m.text })) }),
       });
       const data = await res.json();
-      const botText = data.response || data.message || "I'm having trouble right now. Please try again or reach us at +91 8953960991!";
+      const botText = data.response || data.message || BOT_RESPONSES[Math.floor(Math.random() * BOT_RESPONSES.length)].text;
 
-      // Parse chips from [chip1] [chip2] format
+      // Parse chips
       const chipRegex = /\[([^\[\]]{1,60})\]/g;
       const chips: string[] = [];
       let match;
       while ((match = chipRegex.exec(botText)) !== null) chips.push(match[1].trim());
       const cleanText = botText.replace(chipRegex, '').replace(/\s{2,}/g, ' ').trim();
 
-      await new Promise(r => setTimeout(r, 600 + Math.random() * 800));
+      await new Promise(r => setTimeout(r, delay));
       setIsTyping(false);
-      addMessage('bot', cleanText || botText, chips.length > 0 ? chips : undefined);
 
-      if (!isOpen) setHasNewMessage(true);
+      const botMsg: Message = { id: ++msgIdCounter.current, sender: 'bot', text: cleanText || botText, timestamp: new Date().toISOString() };
+      setMessages(prev => [...prev, botMsg]);
+      setQuickReplies(chips.length > 0 ? chips : BOT_RESPONSES[Math.floor(Math.random() * BOT_RESPONSES.length)].replies);
     } catch {
+      await new Promise(r => setTimeout(r, delay));
       setIsTyping(false);
-      addMessage('bot', "Oops — something went wrong! Please try again or call us at +91 8953960991 📞");
+      const fallback = BOT_RESPONSES[Math.floor(Math.random() * BOT_RESPONSES.length)];
+      setMessages(prev => [...prev, { id: ++msgIdCounter.current, sender: 'bot', text: fallback.text, timestamp: new Date().toISOString() }]);
+      setQuickReplies(fallback.replies);
     }
   };
 
-  const formatText = (text: string) => {
-    return text
-      .replace(/\*\*(.+?)\*\*/g, '<strong class="font-semibold">$1</strong>')
-      .replace(/\n/g, '<br/>');
+  const handleRate = (messageId: number, rating: 'up' | 'down', e?: React.MouseEvent) => {
+    setRatings(prev => ({ ...prev, [messageId]: rating }));
+    setRatingMessageId(null);
+    if (rating === 'up' && e) {
+      setConfetti({ x: e.clientX, y: e.clientY });
+      setTimeout(() => setConfetti(null), 1200);
+    }
   };
+
+  const clearChat = () => {
+    setMessages([]); setRatings({}); setRatingMessageId(null); setQuickReplies([]);
+    localStorage.removeItem(STORAGE_KEY);
+  };
+
+  const lastBotIdx = messages.map((m, i) => m.sender === 'bot' ? i : -1).filter(i => i >= 0).pop();
 
   return (
     <>
-      {/* Floating Launcher */}
-      <motion.button
-        onClick={() => isOpen ? setIsOpen(false) : handleOpen()}
-        className="fixed bottom-6 right-6 z-[9999] w-[60px] h-[60px] rounded-full flex items-center justify-center shadow-2xl border-0 outline-none cursor-pointer"
-        style={{ background: 'linear-gradient(135deg, #2563EB 0%, #1d4ed8 100%)' }}
-        whileHover={{ scale: 1.1, y: -3 }}
-        whileTap={{ scale: 0.9 }}
-        initial={{ opacity: 0, scale: 0 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: 1.5, type: 'spring', stiffness: 200 }}
-      >
-        <AnimatePresence mode="wait">
-          {isOpen ? (
-            <motion.div key="close" initial={{ rotate: -90, scale: 0 }} animate={{ rotate: 0, scale: 1 }} exit={{ rotate: 90, scale: 0 }} transition={{ duration: 0.2 }}>
-              <X className="w-6 h-6 text-white" />
-            </motion.div>
-          ) : (
-            <motion.div key="open" initial={{ rotate: 90, scale: 0 }} animate={{ rotate: 0, scale: 1 }} exit={{ rotate: -90, scale: 0 }} transition={{ duration: 0.2 }}>
-              <MessageSquare className="w-6 h-6 text-white" />
-            </motion.div>
-          )}
-        </AnimatePresence>
+      {confetti && <ConfettiBurst x={confetti.x} y={confetti.y} />}
 
-        {/* Pulse ring */}
-        {!isOpen && <span className="absolute inset-0 rounded-full animate-ping opacity-20" style={{ background: '#2563EB' }} />}
-
-        {/* New message dot */}
-        {hasNewMessage && !isOpen && (
-          <motion.span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-[#FF6B35] rounded-full border-2 border-white" animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 1.5 }} />
+      {/* Floating Chat Toggle — Orbital Rings */}
+      <AnimatePresence>
+        {!isOpen && (
+          <motion.button
+            initial={{ scale: 0, rotate: -180 }} animate={{ scale: 1, rotate: 0 }}
+            exit={{ scale: 0, rotate: 180, opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 260, damping: 20 }}
+            onClick={() => setIsOpen(true)}
+            className="fixed bottom-8 right-8 cursor-pointer group z-50"
+          >
+            <motion.div className="absolute inset-[-8px] rounded-full border-2 border-blue-400/20" animate={{ rotate: 360, scale: [1, 1.1, 1] }} transition={{ duration: 4, repeat: Infinity, ease: 'linear' }} />
+            <motion.div className="absolute inset-[-16px] rounded-full border border-purple-400/15" animate={{ rotate: -360 }} transition={{ duration: 6, repeat: Infinity, ease: 'linear' }} />
+            <motion.div className="absolute inset-[-24px] rounded-full border border-orange-400/10" animate={{ rotate: 360 }} transition={{ duration: 8, repeat: Infinity, ease: 'linear' }} />
+            <div className="w-16 h-16 rounded-full flex items-center justify-center relative overflow-hidden"
+              style={{ background: 'linear-gradient(135deg, #4A7CFF, #8B5CF6, #FF6B4A)' }}>
+              <motion.div className="absolute inset-0 rounded-full"
+                style={{ background: 'conic-gradient(from 0deg, transparent, rgba(255,255,255,0.15), transparent)' }}
+                animate={{ rotate: 360 }} transition={{ duration: 20, repeat: Infinity, ease: 'linear' }} />
+              <MessageCircle className="w-7 h-7 text-white relative z-10" />
+              <span className="absolute top-0 right-0 w-4 h-4 bg-green-400 rounded-full border-2 border-[#050510] z-10">
+                <motion.span className="absolute inset-0 rounded-full bg-green-400" animate={{ scale: [1, 1.8, 1], opacity: [0.5, 0, 0.5] }} transition={{ duration: 2, repeat: Infinity }} />
+              </span>
+            </div>
+            <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 1.5, type: 'spring' }}
+              className="absolute -top-1 -left-1 px-2 py-0.5 rounded-full text-white text-[9px] font-bold z-20 ring-2 ring-white"
+              style={{ background: 'linear-gradient(135deg, #4A7CFF, #FF6B4A)' }}>
+              Hi!
+            </motion.span>
+          </motion.button>
         )}
-      </motion.button>
+      </AnimatePresence>
 
-      {/* Chat Window */}
+      {/* Chat Widget */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            className="fixed bottom-[100px] right-6 z-[9999] w-[400px] max-h-[600px] h-[600px] rounded-2xl overflow-hidden flex flex-col shadow-2xl"
-            style={{ background: 'rgba(255,255,255,0.97)', backdropFilter: 'blur(20px)', border: '1px solid rgba(37,99,235,0.12)' }}
-            initial={{ opacity: 0, y: 24, scale: 0.92 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 16, scale: 0.95 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+            initial={{ opacity: 0, y: 60, scale: 0.85, filter: 'blur(10px)' }}
+            animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
+            exit={{ opacity: 0, y: 60, scale: 0.85, filter: 'blur(10px)' }}
+            transition={{ type: 'spring', stiffness: 280, damping: 24 }}
+            className="fixed bottom-6 right-6 w-[400px] max-w-[calc(100vw-2rem)] h-[640px] max-h-[calc(100vh-3rem)] rounded-[28px] flex flex-col overflow-hidden z-50"
           >
-            {/* Welcome Splash */}
-            <AnimatePresence>
-              {showWelcome && (
-                <motion.div className="absolute inset-0 z-20 flex flex-col items-center justify-center" style={{ background: 'linear-gradient(135deg, #2563EB, #1d4ed8)' }} exit={{ opacity: 0 }} transition={{ duration: 0.5 }}>
-                  <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 200 }}>
-                    <div className="w-20 h-20 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center mb-4">
-                      <Bot className="w-10 h-10 text-white" />
-                    </div>
+            {/* Rainbow animated border */}
+            <div className="absolute -inset-[1.5px] rounded-[28px] z-0 overflow-hidden">
+              <motion.div className="w-[300%] h-[300%] absolute -top-[100%] -left-[100%]"
+                style={{ background: 'conic-gradient(from 0deg, #4A7CFF, #8B5CF6, #FF6B4A, #EC4899, #06B6D4, #4A7CFF)' }}
+                animate={{ rotate: 360 }} transition={{ duration: 6, repeat: Infinity, ease: 'linear' }} />
+            </div>
+
+            <div className="relative z-10 bg-white rounded-[27px] flex flex-col h-full overflow-hidden">
+              {/* Rating card */}
+              <AnimatePresence>
+                {ratingMessageId !== null && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 14, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 14, scale: 0.9 }}
+                    className="absolute top-3 left-1/2 -translate-x-1/2 z-[60] bg-white/95 backdrop-blur-xl rounded-2xl px-5 py-3 flex items-center gap-3"
+                    style={{ boxShadow: '0 8px 32px rgba(74,124,255,0.15), 0 0 0 1px rgba(0,0,0,0.05)' }}
+                  >
+                    <Sparkles className="w-4 h-4 text-purple-400" />
+                    <span className="text-sm text-gray-700 font-semibold whitespace-nowrap">Was this helpful?</span>
+                    <motion.button onClick={(e: any) => handleRate(ratingMessageId, 'up', e)} whileHover={{ scale: 1.3 }} whileTap={{ scale: 0.8 }}
+                      className="p-2 rounded-xl bg-green-50 hover:bg-green-100 transition-colors cursor-pointer">
+                      <ThumbsUp className="w-4 h-4 text-green-500" />
+                    </motion.button>
+                    <motion.button onClick={() => handleRate(ratingMessageId, 'down')} whileHover={{ scale: 1.3 }} whileTap={{ scale: 0.8 }}
+                      className="p-2 rounded-xl bg-red-50 hover:bg-red-100 transition-colors cursor-pointer">
+                      <ThumbsDown className="w-4 h-4 text-red-400" />
+                    </motion.button>
+                    <button onClick={() => setRatingMessageId(null)} className="p-1 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
+                      <X className="w-3 h-3 text-gray-400" />
+                    </button>
                   </motion.div>
-                  <motion.p className="text-white/90 text-sm font-medium" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-                    ClaritAI Assistant is ready
-                  </motion.p>
-                  <motion.div className="flex gap-1 mt-3" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}>
-                    {[0, 1, 2].map(i => (
-                      <motion.div key={i} className="w-2 h-2 rounded-full bg-white/60" animate={{ y: [0, -6, 0] }} transition={{ repeat: Infinity, duration: 0.8, delay: i * 0.15 }} />
+                )}
+              </AnimatePresence>
+
+              {/* Floating controls */}
+              <div className="absolute top-3 right-3 z-30 flex items-center gap-1.5">
+                <motion.button onClick={clearChat} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+                  className="w-8 h-8 rounded-full bg-white/80 backdrop-blur-md shadow-md flex items-center justify-center cursor-pointer hover:bg-white transition-colors" title="Clear chat">
+                  <RotateCcw className="w-3.5 h-3.5 text-gray-500" />
+                </motion.button>
+                <motion.button onClick={() => setIsOpen(false)} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+                  className="w-8 h-8 rounded-full bg-white/80 backdrop-blur-md shadow-md flex items-center justify-center cursor-pointer hover:bg-white transition-colors">
+                  <X className="w-3.5 h-3.5 text-gray-500" />
+                </motion.button>
+              </div>
+
+              {/* Messages */}
+              <div ref={chatContainerRef} onScroll={handleChatScroll}
+                className="flex-1 overflow-y-auto px-4 py-4 space-y-4 relative">
+                <Particles />
+                {messages.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-full text-center px-4 relative z-10">
+                    <motion.div initial={{ scale: 0, rotate: -30 }} animate={{ scale: 1, rotate: 0 }} transition={{ type: 'spring', stiffness: 200, delay: 0.2 }} className="relative mb-5">
+                      <motion.div className="absolute -inset-[3px] rounded-full"
+                        style={{ background: 'conic-gradient(from 0deg, #4A7CFF, #8B5CF6, #FF6B4A, #EC4899, #06B6D4, #4A7CFF)' }}
+                        animate={{ rotate: 360 }} transition={{ duration: 4, repeat: Infinity, ease: 'linear' }} />
+                      <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center relative z-10 ring-4 ring-white">
+                        <MessageCircle className="w-9 h-9 text-white" />
+                      </div>
+                      <span className="absolute bottom-1 right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-white z-20">
+                        <motion.span className="absolute inset-0 rounded-full bg-green-400" animate={{ scale: [1, 2, 1], opacity: [0.5, 0, 0.5] }} transition={{ duration: 2, repeat: Infinity }} />
+                      </span>
+                    </motion.div>
+                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
+                      <h2 className="text-gray-900 font-bold text-xl tracking-tight">Hi, I'm {BOT_NAME}! 👋</h2>
+                      <p className="text-gray-400 text-sm mt-2 leading-relaxed max-w-[260px] mx-auto">
+                        I can help you explore our AI Chatbot, CRM, and Voice Agent — everything your business needs to capture leads and close deals.
+                      </p>
+                    </motion.div>
+                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }} className="flex flex-wrap gap-2 mt-6 justify-center">
+                      {WELCOME_REPLIES.map((q, i) => {
+                        const colors = ['border-blue-200 text-blue-600 bg-blue-50/50 hover:bg-blue-50',
+                          'border-purple-200 text-purple-600 bg-purple-50/50 hover:bg-purple-50',
+                          'border-orange-200 text-orange-600 bg-orange-50/50 hover:bg-orange-50',
+                          'border-pink-200 text-pink-600 bg-pink-50/50 hover:bg-pink-50'][i];
+                        return (
+                          <motion.button key={q} onClick={() => sendMessage(q)}
+                            whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }}
+                            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 + i * 0.08 }}
+                            className={`px-4 py-2.5 rounded-2xl text-xs font-semibold cursor-pointer border hover:shadow-lg transition-all ${colors}`}>
+                            {q}
+                          </motion.button>
+                        );
+                      })}
+                    </motion.div>
+                  </div>
+                ) : (
+                  <>
+                    <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-3 px-2 py-2 mb-2">
+                      <div className="relative">
+                        <motion.div className="absolute -inset-[2px] rounded-full"
+                          style={{ background: 'conic-gradient(from 0deg, #4A7CFF, #8B5CF6, #FF6B4A, #EC4899, #06B6D4, #4A7CFF)' }}
+                          animate={{ rotate: 360 }} transition={{ duration: 4, repeat: Infinity, ease: 'linear' }} />
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center relative z-10 ring-2 ring-white">
+                          <MessageCircle className="w-5 h-5 text-white" />
+                        </div>
+                        <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-400 rounded-full border-2 border-white z-20">
+                          <motion.span className="absolute inset-0 rounded-full bg-green-400" animate={{ scale: [1, 1.8, 1], opacity: [0.5, 0, 0.5] }} transition={{ duration: 2, repeat: Infinity }} />
+                        </span>
+                      </div>
+                      <div>
+                        <h3 className="text-gray-900 font-bold text-sm tracking-tight">{BOT_NAME} by ClaritAI</h3>
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                          <span className="text-[11px] text-gray-400 font-medium">Online • AI Sales Assistant</span>
+                        </div>
+                      </div>
+                    </motion.div>
+                    <div className="relative px-2 mb-1"><div className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent" /></div>
+
+                    {messages.map((msg, idx) => (
+                      <MessageBubble key={msg.id} msg={msg}
+                        onRateClick={() => setRatingMessageId(ratingMessageId === msg.id ? null : msg.id)}
+                        userRating={ratings[msg.id]}
+                        isLatestBot={msg.sender === 'bot' && idx === lastBotIdx && !typingDone}
+                        onTypingDone={() => setTypingDone(true)} />
                     ))}
-                  </motion.div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                    <AnimatePresence>{isTyping && <TypingIndicator />}</AnimatePresence>
 
-            {/* Header */}
-            <div className="relative px-5 py-4 flex items-center gap-3 flex-shrink-0 overflow-hidden" style={{ background: 'linear-gradient(135deg, #2563EB 0%, #1d4ed8 100%)' }}>
-              {/* Shimmer */}
-              <div className="absolute inset-0 overflow-hidden">
-                <div className="absolute top-0 -left-full w-full h-full animate-[shimmer_4s_ease-in-out_infinite]" style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent)' }} />
+                    {/* Quick Replies */}
+                    <AnimatePresence>
+                      {quickReplies.length > 0 && typingDone && (
+                        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+                          className="flex flex-wrap gap-2 pl-12">
+                          {quickReplies.map((reply, i) => {
+                            const colors = ['border-blue-200 text-blue-600 bg-blue-50/50 hover:bg-blue-50',
+                              'border-purple-200 text-purple-600 bg-purple-50/50 hover:bg-purple-50',
+                              'border-orange-200 text-orange-600 bg-orange-50/50 hover:bg-orange-50',
+                              'border-pink-200 text-pink-600 bg-pink-50/50 hover:bg-pink-50'][i % 4];
+                            return (
+                              <motion.button key={reply} onClick={() => sendMessage(reply)}
+                                initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.08 }}
+                                whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }}
+                                className={`px-3.5 py-2 rounded-2xl text-xs font-semibold cursor-pointer border hover:shadow-md transition-all ${colors}`}>
+                                {reply}
+                              </motion.button>
+                            );
+                          })}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </>
+                )}
+                <div ref={chatEndRef} />
               </div>
-              {/* Floating particles */}
-              {[...Array(4)].map((_, i) => (
-                <div key={i} className="absolute w-1 h-1 rounded-full bg-white/15" style={{ top: `${20 + i * 20}%`, left: `${10 + i * 25}%`, animation: `float-slow ${5 + i}s ease-in-out infinite ${i * 0.5}s` }} />
-              ))}
 
-              <div className="relative z-10 w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center flex-shrink-0">
-                <Bot className="w-5 h-5 text-white" />
-              </div>
-              <div className="relative z-10 flex-1 min-w-0">
-                <h3 className="text-white font-bold text-[15px] leading-tight">ClaritAI Assistant</h3>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  <span className="text-white/80 text-xs">AI-Powered • Replies instantly</span>
+              {/* Scroll to bottom */}
+              <AnimatePresence>
+                {showScrollBtn && (
+                  <motion.button initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }}
+                    onClick={scrollToBottom}
+                    className="absolute bottom-24 right-6 z-30 w-8 h-8 rounded-full bg-white shadow-lg border border-gray-100 flex items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors">
+                    <ArrowDown className="w-4 h-4 text-gray-500" />
+                  </motion.button>
+                )}
+              </AnimatePresence>
+
+              {/* Input Bar */}
+              <div className="px-4 py-3 bg-white relative z-10">
+                <div className={`flex items-center gap-2 bg-gray-50/80 rounded-2xl px-3 py-2.5 border transition-all relative overflow-hidden ${
+                  input.trim() ? 'border-blue-300/60' : 'border-gray-200/60'
+                }`}
+                  style={input.trim() ? { boxShadow: '0 0 0 3px rgba(74,124,255,0.08)' } : {}}>
+                  <input ref={inputRef} type="text" value={input} onChange={e => setInput(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && sendMessage()}
+                    placeholder="Ask about chatbot, CRM, or voice agent..."
+                    className="flex-1 bg-transparent text-sm text-gray-800 placeholder-gray-400 outline-none min-w-0 relative z-10" />
+                  <RippleButton onClick={() => sendMessage()} disabled={!input.trim()}
+                    className="p-2.5 rounded-xl transition-all cursor-pointer flex-shrink-0 relative z-10 disabled:opacity-30 disabled:cursor-not-allowed"
+                    style={{ background: input.trim() ? 'linear-gradient(135deg, #4A7CFF, #8B5CF6, #FF6B4A)' : '#e5e7eb',
+                      boxShadow: input.trim() ? '0 4px 15px rgba(74,124,255,0.3)' : 'none' }}>
+                    <motion.div animate={sendPulse ? { scale: [1, 1.4, 1] } : {}} transition={{ duration: 0.3 }}>
+                      <Send className="w-4 h-4 text-white" />
+                    </motion.div>
+                  </RippleButton>
+                </div>
+                <div className="flex items-center justify-center mt-2.5 gap-1.5">
+                  <motion.div animate={{ opacity: [0.3, 0.6, 0.3] }} transition={{ duration: 3, repeat: Infinity }} className="w-1 h-1 rounded-full bg-blue-300" />
+                  <span className="text-[10px] text-gray-300 font-medium tracking-wider">Powered by Clarit<span className="text-transparent bg-clip-text" style={{ backgroundImage: 'linear-gradient(135deg, #4A7CFF, #FF6B4A)' }}>AI</span></span>
+                  <motion.div animate={{ opacity: [0.3, 0.6, 0.3] }} transition={{ duration: 3, repeat: Infinity, delay: 0.5 }} className="w-1 h-1 rounded-full bg-orange-300" />
                 </div>
               </div>
-              <button onClick={() => setIsOpen(false)} className="relative z-10 w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-all hover:rotate-90">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3" style={{ scrollBehavior: 'smooth' }}>
-              {messages.map((msg, i) => (
-                <motion.div
-                  key={msg.id}
-                  initial={{ opacity: 0, y: 12, x: msg.role === 'user' ? 12 : -12 }}
-                  animate={{ opacity: 1, y: 0, x: 0 }}
-                  transition={{ duration: 0.35, type: 'spring', stiffness: 200 }}
-                  className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div className={`max-w-[82%] px-4 py-3 text-sm leading-relaxed ${
-                    msg.role === 'user'
-                      ? 'rounded-2xl rounded-br-sm text-white font-medium shadow-lg'
-                      : 'rounded-2xl rounded-bl-sm text-gray-800 border border-gray-100 shadow-sm'
-                  }`} style={msg.role === 'user' ? { background: 'linear-gradient(135deg, #2563EB, #1d4ed8)' } : { background: '#F9FAFB' }}>
-                    <div dangerouslySetInnerHTML={{ __html: formatText(msg.text) }} />
-                  </div>
-                </motion.div>
-              ))}
-
-              {/* Chips */}
-              {messages.length > 0 && messages[messages.length - 1].chips && (
-                <motion.div className="flex flex-wrap gap-2 pl-1" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-                  {messages[messages.length - 1].chips!.map((chip, i) => (
-                    <motion.button
-                      key={chip}
-                      onClick={() => handleSend(chip)}
-                      className="px-3.5 py-2 rounded-full text-xs font-medium border border-[#2563EB]/30 text-[#2563EB] hover:bg-[#2563EB] hover:text-white transition-all hover:-translate-y-0.5 hover:shadow-md"
-                      initial={{ opacity: 0, scale: 0.6 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: 0.1 * i, type: 'spring', stiffness: 200 }}
-                    >
-                      {chip}
-                    </motion.button>
-                  ))}
-                </motion.div>
-              )}
-
-              {/* Typing indicator */}
-              {isTyping && (
-                <motion.div className="flex justify-start" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                  <div className="px-4 py-3 rounded-2xl rounded-bl-sm bg-gray-50 border border-gray-100 flex gap-1.5">
-                    {[0, 1, 2].map(i => (
-                      <motion.div key={i} className="w-2 h-2 rounded-full bg-gray-400" animate={{ y: [0, -6, 0] }} transition={{ repeat: Infinity, duration: 0.8, delay: i * 0.15 }} />
-                    ))}
-                  </div>
-                </motion.div>
-              )}
-
-              <div ref={messagesEndRef} />
-            </div>
-
-            {/* Input */}
-            <div className="px-4 py-3 border-t border-gray-100 flex gap-2.5 items-center bg-white/95 flex-shrink-0">
-              <input
-                ref={inputRef}
-                value={input}
-                onChange={e => setInput(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSend()}
-                placeholder="Ask anything about ClaritAI..."
-                className="flex-1 border border-gray-200 rounded-full px-4 py-2.5 text-sm outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/10 transition-all placeholder:text-gray-400"
-                maxLength={500}
-                disabled={isTyping}
-              />
-              <motion.button
-                onClick={() => handleSend()}
-                disabled={isTyping || !input.trim()}
-                className="w-10 h-10 rounded-full flex items-center justify-center text-white flex-shrink-0 disabled:opacity-40 transition-all"
-                style={{ background: 'linear-gradient(135deg, #2563EB, #1d4ed8)' }}
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-              >
-                <Send className="w-4 h-4" />
-              </motion.button>
-            </div>
-
-            {/* Powered by */}
-            <div className="text-center py-2 text-[11px] text-gray-400 bg-white border-t border-gray-50 flex-shrink-0">
-              Powered by <a href="/" className="text-[#2563EB] font-semibold hover:underline">ClaritAI</a> • AI-Powered Lead Conversion
             </div>
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* CSS for shimmer animation */}
-      <style>{`
-        @keyframes shimmer { 0% { left: -100%; } 50% { left: 100%; } 100% { left: 100%; } }
-        @media (max-width: 480px) {
-          .fixed.bottom-\\[100px\\].right-6.w-\\[400px\\] {
-            width: calc(100vw - 16px) !important;
-            right: 8px !important;
-            bottom: 88px !important;
-            max-height: calc(100vh - 108px) !important;
-            height: calc(100vh - 108px) !important;
-          }
-        }
-      `}</style>
     </>
   );
 }
