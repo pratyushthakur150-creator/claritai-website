@@ -53,7 +53,7 @@ export async function sendWelcomeEmail(email: string, name: string) {
             <li>💬 <a href="https://wa.me/918953960991">Chat with us on WhatsApp</a></li>
             <li>📧 Reply to this email with any questions</li>
           </ul>
-          <p>Best regards,<br/>Pratyush Thakur<br/>Founder, ClaritAI</p>
+          <p>Best regards,<br/>The ClaritAI Team<br/>Aman Saraswat, Piyush Kumar & Pratyush Singh</p>
         </div>
       `,
     });

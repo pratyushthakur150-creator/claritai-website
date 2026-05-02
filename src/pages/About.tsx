@@ -84,25 +84,33 @@ export default function About() {
         </div>
       </section>
 
-      {/* Team / Founder */}
+      {/* Team */}
       <section className="py-24">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Built by Engineers, for Educators</h2>
-          <p className="text-gray-600 text-lg mb-12">ClaritAI is founded by IIT graduates who understand both technology and the Indian education landscape.</p>
-          <motion.div initial={{opacity:0,y:30}} whileInView={{opacity:1,y:0}} viewport={{once:true}} className="bg-white rounded-3xl p-10 shadow-xl border border-gray-100 inline-block">
-            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-[#2563EB] to-[#FF6B35] flex items-center justify-center mx-auto mb-6">
-              <span className="text-3xl font-bold text-white">P</span>
-            </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-1">Pratyush Thakur</h3>
-            <p className="text-[#2563EB] font-medium mb-3">Founder & CEO</p>
-            <p className="text-gray-600 text-sm max-w-md">IIT Guwahati alumnus passionate about using AI to transform how coaching institutes connect with students.</p>
-            <div className="mt-4">
-              <a href="https://www.linkedin.com/company/clarit-ai/" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-sm text-[#2563EB] hover:underline">
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
-                LinkedIn
-              </a>
-            </div>
-          </motion.div>
+          <p className="text-gray-600 text-lg mb-12">ClaritAI is founded by passionate individuals who understand both technology and the Indian education landscape.</p>
+          <div className="grid md:grid-cols-3 gap-8">
+            {[
+              { initial: 'A', name: 'Aman Saraswat', role: 'Founder', desc: 'Visionary entrepreneur driving ClaritAI\'s mission to democratize AI-powered admissions technology for every coaching institute in India.', gradient: 'from-[#2563EB] to-[#7C3AED]' },
+              { initial: 'P', name: 'Piyush Kumar', role: 'CEO', desc: 'Strategic leader with deep expertise in ed-tech operations, scaling ClaritAI\'s platform to empower 550+ coaching institutes nationwide.', gradient: 'from-[#FF6B35] to-[#F59E0B]' },
+              { initial: 'P', name: 'Pratyush Singh', role: 'Co-Founder', desc: 'IIT Guwahati alumnus passionate about using AI to transform how coaching institutes capture and convert student leads.', gradient: 'from-[#10B981] to-[#2563EB]' },
+            ].map((member, i) => (
+              <motion.div key={i} initial={{opacity:0,y:30}} whileInView={{opacity:1,y:0}} transition={{delay:i*0.15}} viewport={{once:true}} className="bg-white rounded-3xl p-8 shadow-xl border border-gray-100 hover:shadow-2xl transition-all">
+                <div className={`w-20 h-20 rounded-full bg-gradient-to-br ${member.gradient} flex items-center justify-center mx-auto mb-5`}>
+                  <span className="text-2xl font-bold text-white">{member.initial}</span>
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-1">{member.name}</h3>
+                <p className="text-[#2563EB] font-semibold text-sm mb-3">{member.role}</p>
+                <p className="text-gray-600 text-sm leading-relaxed">{member.desc}</p>
+                <div className="mt-4">
+                  <a href="https://www.linkedin.com/company/clarit-ai/" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-sm text-[#2563EB] hover:underline">
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+                    LinkedIn
+                  </a>
+                </div>
+              </motion.div>
+            ))}
+          </div>
         </div>
       </section>
 
