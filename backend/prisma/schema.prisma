@@ -1,0 +1,66 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  phone        String?
+  institute    String?
+  passwordHash String
+  role         Role     @default(USER)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("users")
+}
+
+model ContactSubmission {
+  id        String   @id @default(uuid())
+  name      String
+  email     String
+  phone     String
+  institute String?
+  city      String?
+  message   String?
+  interest  String?
+  source    String?
+  status    String   @default("new")
+  createdAt DateTime @default(now())
+
+  @@map("contact_submissions")
+}
+
+model DemoRequest {
+  id        String   @id @default(uuid())
+  name      String
+  email     String
+  phone     String
+  institute String?
+  product   String?
+  notes     String?
+  status    String   @default("pending")
+  createdAt DateTime @default(now())
+
+  @@map("demo_requests")
+}
+
+model NewsletterSubscription {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
+
+  @@map("newsletter_subscriptions")
+}

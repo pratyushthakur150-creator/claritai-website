@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: claritai-backend
+    runtime: node
+    region: singapore
+    plan: free
+    buildCommand: npm install && npx prisma generate && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: RESEND_API_KEY
+        sync: false
+      - key: ADMIN_EMAIL
+        value: s.pratyush@iitg.ac.in
+      - key: FRONTEND_URL
+        value: https://claritai.in
+      - key: NODE_ENV
+        value: production
