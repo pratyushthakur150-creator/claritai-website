@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
-import { motion, useInView } from 'framer-motion';
-import { Check, CheckCheck, ThumbsUp, ThumbsDown, Sparkles } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Check, CheckCheck, ThumbsUp, ThumbsDown } from 'lucide-react';
 
-const BOT_AVATAR = '/sia-avatar-small.png';
+export const BOT_AVATAR = '/sia-avatar-small.png';
+export const BOT_AVATAR_LG = '/sia-avatar.png';
 
 /* ─── Confetti Burst ─── */
 export function ConfettiBurst({ x, y }: { x: number; y: number }) {
-  const colors = ['#4A7CFF', '#8B5CF6', '#FF6B4A', '#22C55E', '#F59E0B', '#EC4899', '#06B6D4', '#10B981'];
+  const colors = ['#4A7CFF','#8B5CF6','#FF6B4A','#22C55E','#F59E0B','#EC4899','#06B6D4','#10B981'];
   const particles = Array.from({ length: 30 }, (_, i) => ({
     id: i, color: colors[i % colors.length],
     angle: (i / 30) * 360, speed: 50 + Math.random() * 100,
@@ -20,7 +21,7 @@ export function ConfettiBurst({ x, y }: { x: number; y: number }) {
           <motion.div key={p.id} className="absolute rounded-sm"
             style={{ width: p.size, height: p.size, background: p.color, left: 0, top: 0 }}
             initial={{ x: 0, y: 0, opacity: 1, rotate: 0, scale: 1 }}
-            animate={{ x: Math.cos(rad) * p.speed, y: Math.sin(rad) * p.speed - 40, opacity: 0, rotate: p.rotation + 720, scale: 0 }}
+            animate={{ x: Math.cos(rad)*p.speed, y: Math.sin(rad)*p.speed - 40, opacity: 0, rotate: p.rotation+720, scale: 0 }}
             transition={{ duration: 0.9 + Math.random() * 0.4, ease: 'easeOut' }} />
         );
       })}
@@ -75,7 +76,7 @@ export function Particles() {
       {particles.map(p => (
         <motion.div key={p.id} className="absolute rounded-full"
           style={{ left: `${p.x}%`, top: `${p.y}%`, width: p.size, height: p.size,
-            background: ['rgba(74,124,255,0.08)', 'rgba(139,92,246,0.06)', 'rgba(255,107,74,0.06)', 'rgba(236,72,153,0.05)', 'rgba(6,182,212,0.05)'][p.id % 5] }}
+            background: ['rgba(74,124,255,0.08)','rgba(139,92,246,0.06)','rgba(255,107,74,0.06)','rgba(236,72,153,0.05)','rgba(6,182,212,0.05)'][p.id % 5] }}
           animate={{ y: [-10, 10, -10], x: [-5, 5, -5], opacity: [0.2, 0.6, 0.2] }}
           transition={{ duration: p.duration, repeat: Infinity, delay: p.delay, ease: 'easeInOut' }} />
       ))}
@@ -98,7 +99,7 @@ export function TypingIndicator() {
         <div className="flex items-center gap-[5px]">
           {[0, 1, 2].map(i => (
             <motion.div key={i} className="w-2 h-2 rounded-full"
-              style={{ background: ['#4A7CFF', '#8B5CF6', '#FF6B4A'][i] }}
+              style={{ background: ['#4A7CFF','#8B5CF6','#FF6B4A'][i] }}
               animate={{ y: [0, -8, 0], scale: [1, 1.3, 1] }}
               transition={{ duration: 0.8, repeat: Infinity, delay: i * 0.2, ease: 'easeInOut' }} />
           ))}
@@ -156,9 +157,9 @@ export function MessageBubble({ msg, onRateClick, userRating, isLatestBot, onTyp
               : 'text-gray-800 rounded-[20px] rounded-bl-[6px] bg-white shadow-md shadow-gray-100/60 border border-gray-100/60'
           }`}
           style={isUser ? { background: 'linear-gradient(135deg, #4A7CFF 0%, #6B8FFF 100%)' } : {}}>
-          {isLatestBot && !isUser ? (
-            <TypewriterText text={msg.text} speed={16} onComplete={onTypingDone} />
-          ) : msg.text}
+          {isLatestBot && !isUser
+            ? <TypewriterText text={msg.text} speed={16} onComplete={onTypingDone} />
+            : msg.text}
         </motion.div>
         <div className={`flex items-center gap-2 mt-1.5 px-1 ${isUser ? 'justify-end' : 'justify-start'}`}>
           <span className="text-[10px] text-gray-400 font-medium">{formatTime(msg.timestamp)}</span>
@@ -166,17 +167,12 @@ export function MessageBubble({ msg, onRateClick, userRating, isLatestBot, onTyp
           {!isUser && (
             <motion.button onClick={onRateClick} whileHover={{ scale: 1.3 }} whileTap={{ scale: 0.8 }}
               className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer">
-              {userRating === 'up' ? (
-                <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 500 }}>
-                  <ThumbsUp className="w-3.5 h-3.5 text-green-500 fill-green-500" />
-                </motion.div>
-              ) : userRating === 'down' ? (
-                <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 500 }}>
-                  <ThumbsDown className="w-3.5 h-3.5 text-red-400 fill-red-400" />
-                </motion.div>
-              ) : (
-                <ThumbsUp className="w-3.5 h-3.5 text-gray-300 hover:text-blue-400 transition-colors" />
-              )}
+              {userRating === 'up'
+                ? <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 500 }}><ThumbsUp className="w-3.5 h-3.5 text-green-500 fill-green-500" /></motion.div>
+                : userRating === 'down'
+                ? <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 500 }}><ThumbsDown className="w-3.5 h-3.5 text-red-400 fill-red-400" /></motion.div>
+                : <ThumbsUp className="w-3.5 h-3.5 text-gray-300 hover:text-blue-400 transition-colors" />
+              }
             </motion.button>
           )}
         </div>
@@ -184,5 +180,3 @@ export function MessageBubble({ msg, onRateClick, userRating, isLatestBot, onTyp
     </motion.div>
   );
 }
-
-export { BOT_AVATAR };
