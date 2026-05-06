@@ -15,11 +15,13 @@ import Footer from './components/Footer';
 import ScrollProgress from './components/ScrollProgress';
 import InteractiveCursor from './components/InteractiveCursor';
 import ChatBot from './components/ChatBot';
+import ScrollToTop from './components/ScrollToTop';
 
 function App() {
   return (
     <AnimationProvider>
       <Router>
+        <ScrollToTop />
         <div className="min-h-screen bg-white cursor-none">
           <InteractiveCursor />
           <ScrollProgress />
